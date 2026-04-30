@@ -1,89 +1,39 @@
-% BPSK Modulation
-% This script implements Binary Phase Shift Keying (BPSK) modulation
-
-clear all;
-close all;
 clc;
+clear;
+close all;
 
-% Parameters
-Eb = 1;                          % Energy per bit
-N0 = 0.1;                        % Noise power spectral density
-fc = 1e9;                        % Carrier frequency (1 GHz)
-fs = 10 * fc;                    % Sampling frequency
-Ts = 1/fs;                       % Sampling period
-Tb = 1e-8;                       % Bit duration
-Nsamp = fs * Tb;                 % Samples per bit
+modOrder = 2;
+num_bits = 200000;
+k = log2(modOrder);
+num_symbols = num_bits / k;
+bit_rate = 1e3;
+bit_duration = 1 / bit_rate;
+symbol_duration = bit_duration * k;
+fc = 1e3;
+fs = 1e5;
+ts = 1/fs;
+samples_per_bit = bit_duration/ts;
+samples_per_symbol = samples_per_bit * k;
 
-% Generate random bits
-Nbits = 100;
-bits = randi([0 1], 1, Nbits);
+source_bit = randi([0,1],num_bits,1);
+source_bit = source_bit.';
+fprintf('Binary Data Sequence:\n');
+fprintf('%d ', source_bit);
 
-% Map bits to symbols (+1 for bit 1, -1 for bit 0)
-symbols = 2 * bits - 1;
+modOut = pskmod(source_bit, modOrder, pi, "gray");
+fprintf('\n\nBPSK Symbols:\n');
+fprintf('%+d ', modOut);
+fprintf('\n\n');
 
-% Upsample the symbols
-upsampled = kron(symbols, ones(1, Nsamp));
+x = (0:modOrder-1);                   % Integer input
+symgray = qammod(x,modOrder,'gray','UnitAveragePower',true); % 64-QAM output (Gray-coded)
 
-% Generate carrier signal
-t = (0:length(upsampled)-1) * Ts;
-carrier = sqrt(2 * Eb / Tb) * cos(2 * pi * fc * t);
-
-% Modulate signal
-modulated = upsampled .* carrier;
-
-% Add AWGN noise
-noise = sqrt(N0/2) * randn(size(modulated));
-received = modulated + noise;
-
-% Demodulate signal
-demodulated = received .* carrier;
-
-% Integrate and dump
-integrated = zeros(1, Nbits);
-for i = 1:Nbits
-    idx = (i-1)*Nsamp + 1:i*Nsamp;
-    integrated(i) = sum(demodulated(idx)) / Nsamp;
+scatterplot(symgray,1,0,'y*');
+for k = 1:modOrder
+    text(real(symgray(k)) - 0.0,imag(symgray(k)) + 0.1, dec2base(x(k),2,6),'Color',[0 1 0]);
+    text(real(symgray(k)) - 0.1,imag(symgray(k)) + 0.1, num2str(x(k)),'Color',[0 1 0]);
 end
 
-% Threshold detection
-threshold = 0;
-detected_symbols = sign(integrated);
-detected_bits = (detected_symbols + 1) / 2;
-
-% Calculate BER
-errors = sum(abs(bits - detected_bits));
-BER = errors / Nbits;
-
-% Display results
-fprintf('BPSK Modulation Results\n');
-fprintf('=======================\n');
-fprintf('Number of bits: %d\n', Nbits);
-fprintf('Errors: %d\n', errors);
-fprintf('Bit Error Rate: %f\n', BER);
-
-% Plot results
-figure('Position', [100 100 1200 400]);
-
-subplot(1, 3, 1);
-plot(t(1:1000), modulated(1:1000));
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('BPSK Modulated Signal');
-grid on;
-
-subplot(1, 3, 2);
-plot(t(1:1000), received(1:1000));
-xlabel('Time (s)');
-ylabel('Amplitude');
-title('Received Signal (with noise)');
-grid on;
-
-subplot(1, 3, 3);
-stem(1:Nbits, bits, 'b', 'filled');
-hold on;
-stem(1:Nbits, detected_bits, 'r--');
-xlabel('Bit index');
-ylabel('Bit value');
-title('Original vs Detected Bits');
-legend('Original', 'Detected');
-grid on;
+xlim([-1.3,1.3]);
+ylim([-1.3,1.3]);
+title('BPSK Symbol Constellation','FontWeight', 'bold', 'FontSize', 14);
