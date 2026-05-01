@@ -98,4 +98,4 @@ The spectral efficiency plot shows the throughput cost of switching to more robu
 
 ## Notes
 
-The simulations use Monte Carlo methods, so small changes can appear between runs. The adaptive modulation target BER is `10^-2`.
+The simulations use Monte Carlo methods, so small changes can appear between runs. The adaptive modulation target BER is `10^-2`. Monte Carlo simulation takes a lot of time as the number of trials are really big, to achieve better effeciency, could decrease the number of run trials.
